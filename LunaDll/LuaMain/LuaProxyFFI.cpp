@@ -20,16 +20,23 @@
 #include "../Misc/TestMode.h"
 #include "../Misc/TestModeMenu.h"
 #include "../Misc/RuntimeHook.h"
+#include "../Misc/VB6RNG.h"
 #include "../Input/MouseHandler.h"
 #include "LunaLuaMain.h"
 #include "LuaProxyFFIGraphics.h"
 #include "LunaPathValidator.h"
+
+#include "../Rendering/GL/GLEngine.h"
+#include "../Rendering/GL/GLEngineProxy.h"
+#include "../Misc/CollisionMatrix.h"
 
 #define FFI_EXPORT(sig) __declspec(dllexport) sig __cdecl
 
 // Prototypes from RuntimeHookCharacterId.cpp
 short* getValidCharacterIDArray();
 PlayerMOB* getTemplateForCharacter(int id);
+// Defined in RuntimeHookNpcHarm.cpp
+void markNPCTransformationAsHandledByLua(short npcIdx, short oldID, short newID);
 
 extern "C" {
     FFI_EXPORT(void*) LunaLuaAlloc(size_t size) {
@@ -386,6 +393,10 @@ extern "C" {
         free(cpy);
     }
 
+    FFI_EXPORT(void) LunaLuaQueuePlayerSectionChangedEvent(short playerIndex)
+    {
+        gLunaLua.queuePlayerSectionChangeEvent(playerIndex);
+    }
 
     FFI_EXPORT(int) LunaLuaGetSelectedControllerPowerLevel(int playerNum)
     {
@@ -422,7 +433,8 @@ extern "C" {
 typedef struct ExtendedNPCFields_\
 {\
     bool noblockcollision;\
-    char collisionGroup[32];\
+    short fullyInsideSection;\
+    unsigned int collisionGroup;\
 } ExtendedNPCFields;";
     }
 
@@ -440,13 +452,51 @@ typedef struct ExtendedBlockFields_\
     double layerSpeedY;\
     double extraSpeedX;\
     double extraSpeedY;\
-    char collisionGroup[32];\
+    unsigned int collisionGroup;\
 } ExtendedBlockFields;";
     }
 
-    FFI_EXPORT(int) LunaLuaGetCollisionGroupStringLength()
+    FFI_EXPORT(ExtendedPlayerFields*) LunaLuaGetPlayerExtendedFieldsArray()
     {
-        return 32;
+        return Player::GetExtended(0);
+    }
+
+    FFI_EXPORT(const char*) LunaLuaGetPlayerExtendedFieldsStruct()
+    {
+        return "\
+typedef struct ExtendedPlayerFields_\
+{\
+    bool noblockcollision;\
+    bool nonpcinteraction;\
+    bool noplayerinteraction;\
+    unsigned int collisionGroup;\
+    int slidingTimeSinceOnSlope;\
+} ExtendedPlayerFields;";
+    }
+
+    FFI_EXPORT(unsigned int) LunaLuaCollisionMatrixAllocateIndex()
+    {
+        return gCollisionMatrix.allocateIndex();
+    }
+
+    FFI_EXPORT(void) LunaLuaCollisionMatrixIncrementReferenceCount(unsigned int group)
+    {
+        gCollisionMatrix.incrementReferenceCount(group);
+    }
+
+    FFI_EXPORT(void) LunaLuaCollisionMatrixDecrementReferenceCount(unsigned int group)
+    {
+        gCollisionMatrix.decrementReferenceCount(group);
+    }
+
+    FFI_EXPORT(void) LunaLuaGlobalCollisionMatrixSetIndicesCollide(unsigned int first, unsigned int second, bool collide)
+    {
+        gCollisionMatrix.setIndicesCollide(first, second, collide);
+    }
+
+    FFI_EXPORT(bool) LunaLuaGlobalCollisionMatrixGetIndicesCollide(unsigned int first, unsigned int second) 
+    {
+        return gCollisionMatrix.getIndicesCollide(first, second);
     }
 
     FFI_EXPORT(void) LunaLuaSetPlayerFilterBounceFix(bool enable)
@@ -484,23 +534,36 @@ typedef struct ExtendedBlockFields_\
     {
         if (enable)
         {
-            gDisableNPCSectionFix.Apply();
+            gNPCSectionFix.Apply();
         }
         else
         {
-            gDisableNPCSectionFix.Unapply();
+            gNPCSectionFix.Unapply();
         }
+    }
+
+    FFI_EXPORT(void) LunaLuaSetLinkClowncarFairyFix(bool enable)
+    {
+        if (enable)
+        {
+            gLinkFairyClowncarFixes.Apply();
+        }
+        else
+        {
+            gLinkFairyClowncarFixes.Unapply();
+        }
+    }
+
+    FFI_EXPORT(void) LunaLuaSetSlideJumpFix(bool enable)
+    {
+        gSlideJumpFixIsEnabled = enable;
     }
 
     FFI_EXPORT(void) LunaLuaSetFenceBugFix(bool enable) {
         if (enable) {
-            for (int i = 0; gFenceFixes[i] != nullptr; i++) {
-                gFenceFixes[i]->Apply();
-            }
+            gFenceFixes.Apply();
         } else {
-            for (int i = 0; gFenceFixes[i] != nullptr; i++) {
-                gFenceFixes[i]->Unapply();
-            }
+            gFenceFixes.Unapply();
         }
     }
 
@@ -751,6 +814,59 @@ typedef struct ExtendedBlockFields_\
     {
         return {gMouseHandler.GetX(), gMouseHandler.GetY()};
     }
+
+    FFI_EXPORT(unsigned int) LunaLuaLegacyRNGGetSeed() {
+        return VB6RNG::getSeed();
+    }
+
+    FFI_EXPORT(void) LunaLuaLegacyRNGSetSeed(unsigned int newSeed) {
+        VB6RNG::setSeed(newSeed);
+    }
+
+    FFI_EXPORT(float) LunaLuaLegacyRNGGetLastGeneratedNumber() {
+        return VB6RNG::getLastGeneratedNumber();
+    }
+
+    FFI_EXPORT(float) LunaLuaLegacyRNGGenerateNumber() {
+        return VB6RNG::generateNumber();
+    }
+
+    FFI_EXPORT(bool) LunaLuaIsRecordingGIF()
+    {
+        return g_GLEngine.GifRecorderIsRunning();
+    }
+    
+    FFI_EXPORT(bool) LunaLuaIsFullscreen()
+    {
+        if (gMainWindowHwnd != NULL)
+        {
+            WINDOWPLACEMENT wndpl;
+            wndpl.length = sizeof(WINDOWPLACEMENT);
+            if (GetWindowPlacement(gMainWindowHwnd, &wndpl))
+            {
+                return (wndpl.showCmd == SW_MAXIMIZE);
+            }
+        }
+        return false;
+    }
+
+    FFI_EXPORT(void) LunaLuaSetFullscreen(bool enable)
+    {
+        // Toggling fullscreen without maximizing the window/double clicking the window.
+        if (LunaLuaIsFullscreen() && !enable)
+        {
+            ShowWindow(gMainWindowHwnd, SW_RESTORE);
+        }
+        else if (!LunaLuaIsFullscreen() && enable)
+        {
+            ShowWindow(gMainWindowHwnd, SW_MAXIMIZE);
+        }
+    }
+
+    FFI_EXPORT(void) LunaLuaMarkNPCTransformationAsHandledByLua(int npcIdx, int oldID, int newID)
+    {
+        markNPCTransformationAsHandledByLua(npcIdx, oldID, newID);
+    }
 }
 
 void CachedReadFile::clearData()
@@ -776,5 +892,16 @@ extern "C" {
     {
         if (!path) return nullptr;
         return LunaPathValidator::GetForThread().CheckPath(path);
+    }
+}
+
+extern "C" {
+    FFI_EXPORT(void) LunaLuaSetWeakLava(bool value)
+    {
+        gLavaIsWeak = value;
+    }
+    FFI_EXPORT(bool) LunaLuaGetWeakLava()
+    {
+        return gLavaIsWeak;
     }
 }

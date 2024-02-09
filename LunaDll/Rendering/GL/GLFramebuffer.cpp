@@ -76,6 +76,11 @@ GLFramebuffer::GLFramebuffer(int w, int h, bool haveAlpha) :
 GLFramebuffer::~GLFramebuffer()
 {
     // Unbind framebuffer (if currently bound)
+    if (g_GLContextManager.GetCurrentCameraFB() == this)
+    {
+        // If this the current camera FB, make sure it's not set as a redirect
+        g_GLContextManager.UnRedirectCameraFB(nullptr);
+    }
     if (g_GLContextManager.GetCurrentFB() == this)
     {
         g_GLContextManager.BindScreen();
@@ -143,8 +148,6 @@ void GLFramebuffer::Clear(const GLclampf color[4])
     }
 
     // Bind framebuffer
-    glBindFramebufferANY(GL_FRAMEBUFFER_EXT, mFB);
-    GLERRORCHECK();
     glClearColor(color[0], color[1], color[2], color[3]);
     glClearDepth(100.0f);
     GLERRORCHECK();
@@ -152,12 +155,9 @@ void GLFramebuffer::Clear(const GLclampf color[4])
     GLERRORCHECK();
 
     // Bind what was bound before
-    if (oldFB == nullptr)
+    if (oldFB != this)
     {
-        g_GLContextManager.BindScreen();
-    }
-    else if (oldFB != this)
-    {
-        oldFB->Bind();
+        // Restore the old bound FB (if null, bind screen)
+        g_GLContextManager.RestoreBoundFB(oldFB);
     }
 }

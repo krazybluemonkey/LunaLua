@@ -30,8 +30,11 @@
 #include "../Misc/LoadScreen.h"
 
 #include "LunaPathValidator.h"
+#include "../Misc/CollisionMatrix.h"
 
 /*static*/ DWORD CLunaFFILock::currentLockTlsIdx = TlsAlloc();
+
+extern bool luaDidGameOverFlag;
 
 const std::wstring CLunaLua::LuaLibsPath = L"\\scripts\\base\\engine\\main.lua";
 using namespace luabind;
@@ -47,10 +50,14 @@ std::wstring CLunaLua::getLuaLibsPath()
 CLunaLua::CLunaLua() :
         m_type(CLunaLua::LUNALUA_LEVEL),
         m_luaEventTableName(""),
+        m_warningList(),
         L(0),
         m_ready(false),
         m_onStartRan(false),
-        m_warningList()
+        m_disableSectionChangeEvent(false),
+        m_executeSectionChangeFlag(false),
+        m_playerSectionChangeList(),
+        m_luaCallDepth(0)
 {}
 
 CLunaLua::~CLunaLua()
@@ -121,13 +128,14 @@ bool CLunaLua::shutdown()
     gRenderSizableFlag = true;
     gRenderBackgroundFlag = true;
     gDisablePlayerFilterBounceFix = false;
+    gLavaIsWeak = false;
     gDisablePlayerDownwardClipFix.Apply();
     gDisableNPCDownwardClipFix.Apply();
     gDisableNPCDownwardClipFixSlope.Apply();
-    gDisableNPCSectionFix.Apply();
-    for (int i = 0; gFenceFixes[i] != nullptr; i++) {
-        gFenceFixes[i]->Apply();
-    }
+    gNPCSectionFix.Apply();
+    gFenceFixes.Apply();
+    gLinkFairyClowncarFixes.Apply();
+    gCollisionMatrix.clear();
 
     // Request cached images/sounds/files be held onto for now
     LunaImage::holdCachedImages(m_type == LUNALUA_WORLD);
@@ -147,6 +155,7 @@ bool CLunaLua::shutdown()
 
     m_ready = false;
     m_onStartRan = false;
+    m_luaCallDepth = 0;
     LuaProxy::Audio::resetMciSections();
     lua_close(L);
     L = NULL;
@@ -162,6 +171,7 @@ void CLunaLua::init(LuaLunaType type, std::wstring codePath, std::wstring levelP
 
     //Just to be safe
     shutdown();
+    m_luaCallDepth = 0;
 
     gLunaPathValidator.SetPaths();
 
@@ -234,19 +244,26 @@ void CLunaLua::init(LuaLunaType type, std::wstring codePath, std::wstring levelP
     bindAll();
     bindAllDeprecated();
 
+    // Store flags for stuff lua will read
+    luaDidGameOverFlag = gDidGameOver;
+    gDidGameOver = false;
+
     //Setup default contants
     setupDefaults();
 
     //Load the Lua API
     bool errLapi = false;
-    int lapierrcode = luaL_loadbuffer(L, LuaCode.c_str(), LuaCode.length(), "=main.lua") || lua_pcall(L, 0, LUA_MULTRET, 0);
-    if(!(lapierrcode == 0)){
-        object error_msg(from_stack(L, -1));
-        MessageBoxA(0, object_cast<const char*>(error_msg), "Error", MB_ICONWARNING);
-        errLapi = true;
-    }
     {
-        errLapi = errLapi || luabind::object_cast<bool>(luabind::globals(L)["__isLuaError"]);
+        CCallDepthCounter callDepth(*this);
+        int lapierrcode = luaL_loadbuffer(L, LuaCode.c_str(), LuaCode.length(), "=main.lua") || lua_pcall(L, 0, LUA_MULTRET, 0);
+        if (!(lapierrcode == 0)) {
+            object error_msg(from_stack(L, -1));
+            LunaMsgBox::ShowA(0, object_cast<const char*>(error_msg), "Error", MB_ICONWARNING);
+            errLapi = true;
+        }
+        {
+            errLapi = errLapi || luabind::object_cast<bool>(luabind::globals(L)["__isLuaError"]);
+        }
     }
 
 
@@ -490,6 +507,15 @@ void CLunaLua::setupDefaults()
     LUAHELPER_DEF_CONST(_G, HARM_TYPE_EXT_ICE);
     LUAHELPER_DEF_CONST(_G, HARM_TYPE_EXT_HAMMER);
 
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_UNKNOWN);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_HIT);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_DESPAWN);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_CONTAINER);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_AI);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_EATEN);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_LINK);
+    LUAHELPER_DEF_CONST(_G, NPC_TFCAUSE_SWITCH);
+
     LUAHELPER_DEF_CONST(_G, GL_FLOAT);
     LUAHELPER_DEF_CONST(_G, GL_FLOAT_VEC2);
     LUAHELPER_DEF_CONST(_G, GL_FLOAT_VEC3);
@@ -684,6 +710,7 @@ void CLunaLua::bindAll()
                 def("saveGame", &LuaProxy::Misc::saveGame),
                 def("exitGame", &LuaProxy::Misc::exitGame),
                 def("exitEngine", &LuaProxy::Misc::exitEngine),
+                def("didGameOver", &LuaProxy::Misc::didGameOver),
                 def("loadEpisode", &LuaProxy::Misc::loadEpisode),
                 def("pause", (void(*)(void))&LuaProxy::Misc::pause),
                 def("pause", (void(*)(bool))&LuaProxy::Misc::pause),
@@ -698,7 +725,8 @@ void CLunaLua::bindAll()
                 def("__disablePerfTracker", &LuaProxy::Misc::__disablePerfTracker),
                 def("__getPerfTrackerData", &LuaProxy::Misc::__getPerfTrackerData),
                 def("__getNPCPropertyTableAddress", &NPC::GetPropertyTableAddress),
-                def("__getBlockPropertyTableAddress", &Blocks::GetPropertyTableAddress)
+                def("__getBlockPropertyTableAddress", &Blocks::GetPropertyTableAddress),
+                def("getEditorPlacedItem",(std::string(*)())&GetEditorPlacedItem)
             ],
 
             namespace_("FileFormats")[
@@ -862,6 +890,16 @@ void CLunaLua::bindAll()
                 def("MusicChange", (void(*)(int, int, int))&LuaProxy::Audio::changeMusic),
                 def("MusicChange", (void(*)(int, const std::string&, int))&LuaProxy::Audio::changeMusic),
                 def("MusicFadeOut", (void(*)(int, int))&LuaProxy::Audio::musicFadeOut),
+                def("MusicRewind", (void(*)())&LuaProxy::Audio::MusicRewind),
+                def("MusicGetInstChannelCount", (double(*)())&LuaProxy::Audio::MusicGetInstChannelCount),
+                def("MusicInstChannelMute", (void(*)(int))&LuaProxy::Audio::MusicInstChannelMute),
+                def("MusicInstChannelUnmute", (void(*)(int))&LuaProxy::Audio::MusicInstChannelUnmute),
+                def("MusicSetTempo", (void(*)(double))&LuaProxy::Audio::MusicSetTempo),
+                def("MusicSetPitch", (void(*)(double))&LuaProxy::Audio::MusicSetPitch),
+                def("MusicSetSpeed", (void(*)(double))&LuaProxy::Audio::MusicSetSpeed),
+                def("MusicGetTempo", (double(*)())&LuaProxy::Audio::MusicGetTempo),
+                def("MusicGetPitch", (double(*)())&LuaProxy::Audio::MusicGetPitch),
+                def("MusicGetSpeed", (double(*)())&LuaProxy::Audio::MusicGetSpeed),
 
                 //SFX
                 def("newMix_Chunk", (Mix_Chunk*(*)())&LuaProxy::Audio::newMix_Chunk),
@@ -891,6 +929,9 @@ void CLunaLua::bindAll()
                 def("SfxSetDistance", (int(*)(int, int))&LuaProxy::Audio::SfxSetDistance),
                 def("SfxSet3DPosition", (int(*)(int, int, int))&LuaProxy::Audio::SfxSet3DPosition),
                 def("SfxReverseStereo", (int(*)(int, int))&LuaProxy::Audio::SfxReverseStereo),
+
+                def("MixedSfxVolume", &LuaProxy::Audio::GetMixedSfxVolume),
+                def("MixedSfxVolume", &LuaProxy::Audio::SetMixedSfxVolume),
 
                 LUAHELPER_DEF_CLASS_SMART_PTR_SHARED(PlayingSfxInstance, std::shared_ptr)
                     .def("Pause", &LuaProxy::Audio::PlayingSfxInstance::Pause)
@@ -1042,6 +1083,7 @@ void CLunaLua::bindAll()
             class_<LuaProxy::Console>("Console")
             .def("print", &LuaProxy::Console::print)
             .def("println", &LuaProxy::Console::println)
+            .def("clear", &LuaProxy::Console::clear)
         ];
     if(m_type == LUNALUA_WORLD){
         module(L)
@@ -1484,6 +1526,11 @@ void CLunaLua::triggerOnStart()
     }
 
     if (!m_onStartRan) {
+        // manually flag all players to have onSectionChange called following onStart
+        for (int i = 1; i <= GM_PLAYERS_COUNT; i++) {
+            gLunaLua.queuePlayerSectionChangeEvent(i);
+        }
+        // execute onStart event
         std::shared_ptr<Event> onStartEvent = std::make_shared<Event>("onStart", false);
         onStartEvent->setLoopable(false);
         onStartEvent->setDirectEventName("onStart");
@@ -1539,7 +1586,7 @@ void CLunaLua::checkWarnings()
         {
             message << L" - " << Str2WStr(*iter) << L"\r\n";
         }
-        MessageBoxW(NULL, message.str().c_str(), L"LunaLua Warnings", MB_OK | MB_ICONWARNING);
+        LunaMsgBox::ShowW(NULL, message.str().c_str(), L"LunaLua Warnings", MB_OK | MB_ICONWARNING);
     }
 
     m_warningList.clear();
@@ -1552,4 +1599,19 @@ void CLunaLua::setWarning(const std::string& str)
     {
         m_warningList.push_back(str);
     }
+}
+
+
+void CLunaLua::queuePlayerSectionChangeEvent(int playerIdx) {
+    // queue up an onSectionChange event to be called for this player at the end of the current event
+    // if we aren't currently accepting additional events being queued (currently in the process of executing them), exit
+    if (m_disableSectionChangeEvent) return;
+    // check if the specified player is already queued for the event to be executed
+    for (size_t i = 0; i < m_playerSectionChangeList.size(); i++) {
+        // if we found a match in the list, exit
+        if (m_playerSectionChangeList[i] == playerIdx) return;
+    }
+    // push the player index and set flag to execute event
+    m_playerSectionChangeList.push_back(playerIdx);
+    m_executeSectionChangeFlag = true;
 }

@@ -147,6 +147,7 @@
     <ClInclude Include="libs\Utils\vptrlist.h" />
     <ClInclude Include="LuaMain\LuaProxyFFIGraphics.h" />
     <ClInclude Include="LuaMain\LunaPathValidator.h" />
+    <ClInclude Include="Misc\CollisionMatrix.h" />
     <ClInclude Include="Misc\LoadScreen.h" />
     <ClInclude Include="Misc\NpcIdExtender.h" />
     <ClInclude Include="Misc\ResourceFileMapper.h" />
@@ -192,6 +193,7 @@
     <ClInclude Include="Rendering\GL\GLFramebuffer.h" />
     <ClInclude Include="Rendering\SMBXImageCategories.h" />
     <ClInclude Include="Rendering\WindowSizeHandler.h" />
+    <ClInclude Include="SMBXInternal\Functions.h" />
     <ClInclude Include="SMBXInternal\HardcodedGraphicsAccess.h" />
     <ClInclude Include="Rendering\BitBltEmulation.h" />
     <ClInclude Include="Misc\PerfTracker.h" />
@@ -271,12 +273,15 @@
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Minigames\GameboyRPG.h" />
     <ClInclude Include="Misc\VB6StrPtr.h" />
+    <ClInclude Include="Misc\VB6RNG.h" />
     <ClInclude Include="Misc\Playground.h" />
     <ClInclude Include="GlobalFuncs.h" />
     <ClInclude Include="Globals.h" />
     <ClInclude Include="HardcodedGraphics\HardcodedGraphicsManager.h" />
     <ClInclude Include="CustomSprites\Hitbox\Hitbox.h" />
     <ClInclude Include="Input\Input.h" />
+    <ClInclude Include="SMBXInternal\Types.h" />
+    <ClInclude Include="SMBXInternal\Variables.h" />
     <ClInclude Include="SMBXInternal\Musicbox.h" />
     <ClInclude Include="SMBXInternal\NativeInput.h" />
     <ClInclude Include="SMBXInternal\Layer.h" />
@@ -337,10 +342,15 @@
     <ClCompile Include="LuaMain\LuaProxyComponent\LuaProxyFileFormats.cpp" />
     <ClCompile Include="LuaMain\LuaProxyFFIGraphics.cpp" />
     <ClCompile Include="LuaMain\LunaPathValidator.cpp" />
+    <ClCompile Include="Misc\AsmPatch.cpp" />
+    <ClCompile Include="Misc\CollisionMatrix.cpp" />
+    <ClCompile Include="Misc\Gameover.cpp" />
     <ClCompile Include="Misc\LoadScreen.cpp" />
     <ClCompile Include="Misc\NpcIdExtender.cpp" />
     <ClCompile Include="Misc\ResourceFileMapper.cpp" />
+    <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookDefines.cpp" />
     <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookNpcHarm.cpp" />
+    <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookNPCTransform.cpp" />
     <ClCompile Include="Rendering\ImageLoader.cpp" />
     <ClCompile Include="Rendering\LunaImage.cpp" />
     <ClCompile Include="Rendering\Shaders\GLShaderVariableEntry.cpp" />
@@ -501,6 +511,7 @@
     <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookFixups.cpp" />
     <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookGeneral.cpp" />
     <ClCompile Include="Misc\VB6StrPtr.cpp" />
+    <ClCompile Include="Misc\VB6RNG.cpp" />
     <ClCompile Include="Misc\Playground.cpp" />
     <ClCompile Include="Autocode\Commands\GenComp.cpp" />
     <ClCompile Include="GlobalFuncs.cpp" />
@@ -556,7 +567,6 @@
   <ItemGroup>
     <Text Include="Changelog.txt" />
     <Text Include="FeatureJSONResource.txt" />
-    <Text Include="libs\PGE_File_Formats\Readme.txt" />
     <Text Include="SMBXInternal\Reconstructed\about.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

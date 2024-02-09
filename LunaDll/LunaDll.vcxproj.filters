@@ -218,6 +218,9 @@
     <ClInclude Include="Misc\RuntimeHook.h">
       <Filter>Misc</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\CollisionMatrix.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
     <ClInclude Include="SMBXInternal\NPCs.h">
       <Filter>SMBXInternal</Filter>
     </ClInclude>
@@ -529,7 +532,6 @@
     <ClInclude Include="Misc\Gui\RichTextDialog.h">
       <Filter>Misc\Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Misc\Gui\GuiUtils.h" />
     <ClInclude Include="Rendering\Shaders\GLShaderVariableInfo.h">
       <Filter>Rendering\Shaders</Filter>
     </ClInclude>
@@ -707,6 +709,21 @@
     <ClInclude Include="Input\MouseHandler.h">
       <Filter>Input</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\VB6RNG.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc\Gui\GuiUtils.h">
+      <Filter>Misc\Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="SMBXInternal\Functions.h">
+      <Filter>SMBXInternal</Filter>
+    </ClInclude>
+    <ClInclude Include="SMBXInternal\Variables.h">
+      <Filter>SMBXInternal</Filter>
+    </ClInclude>
+    <ClInclude Include="SMBXInternal\Types.h">
+      <Filter>SMBXInternal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LuaMain\LuaHelper.cpp">
@@ -827,6 +844,9 @@
       <Filter>Minigames\CGUI</Filter>
     </ClCompile>
     <ClCompile Include="Misc\MiscFuncs.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\CollisionMatrix.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="Misc\RuntimeHook.cpp">
@@ -1365,25 +1385,89 @@
     <ClCompile Include="libs\luabind-deboostified\src$filename">
       <Filter>libs\luabind-deboostified</Filter>
     </ClCompile>
-    <ClCompile Include="libs\luabind-deboostified\src$filename">
-      <Filter>libs\luabind-deboostified</Filter>
-    </ClCompile>
-    <ClCompile Include="libs\luabind-deboostified\src$filename">
-      <Filter>libs\luabind-deboostified</Filter>
-    </ClCompile>
-    <ClCompile Include="libs\luabind-deboostified\src$filename">
-      <Filter>libs\luabind-deboostified</Filter>
-    </ClCompile>
-    <ClCompile Include="libs\luabind-deboostified\src$filename">
-      <Filter>libs\luabind-deboostified</Filter>
-    </ClCompile>
-    <ClCompile Include="libs\luabind-deboostified\src$filename">
-      <Filter>libs\luabind-deboostified</Filter>
     <ClCompile Include="Rendering\WindowSizeHandler.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Input\MouseHandler.cpp">
       <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\VB6RNG.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\link_compatibility.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\object_rep.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\open.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\operator.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\pcall.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\scope.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\set_package_preload.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\stack_content_by_name.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\wrapper_base.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\weak_ref.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\inheritance.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\function.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\function_introspection.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\error.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\create_class.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\class.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\class_info.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\class_registry.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\class_rep.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\exception_handler.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\luabind-deboostified\src\headertest.cpp">
+      <Filter>libs\luabind-deboostified\src</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookNPCTransform.cpp">
+      <Filter>Misc\RuntimeHookComponents</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\RuntimeHookComponents\RuntimeHookDefines.cpp">
+      <Filter>Misc\RuntimeHookComponents</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\Gameover.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Misc\AsmPatch.cpp">
+      <Filter>Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1404,7 +1488,6 @@
       <Filter>SMBXInternal\Reconstructed</Filter>
     </Text>
     <Text Include="Changelog.txt" />
-    <Text Include="libs\PGE_File_Formats\Readme.txt" />
     <Text Include="FeatureJSONResource.txt" />
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@
 #include <vector>
 #include <wchar.h>
 #include <string.h>
+#include <mutex>
 
 //String manupulation things
 void splitStr(std::vector<std::string>& dest, const std::string& str, const char* separator);
@@ -253,6 +254,7 @@ void sendPUTRequest(const std::string& server, const std::string& data);
 // Debug stuff
 void InitDebugConsole();
 int DebugPrint(const char * format, ...);
+void DebugClear(HANDLE hConsole);
 void dumpTypeLibrary(IDispatch* dispatchToDump, std::wostream& toOutput);
 
 // Window Helper Funcs
@@ -260,6 +262,7 @@ void ShowAndFocusWindow(HWND hWindow);
 
 // Handle WIN32 events when loading
 void HandleEventsWhileLoading();
+void HandleEventsWhileLoadscreenOnly();
 
 // Float/double manipulation
 #ifdef __clang__
@@ -277,3 +280,12 @@ constexpr std::uint32_t DoubleMostSignificantDWord(double d) {
 #endif
 
 #endif
+
+std::string GetEditorPlacedItem();
+
+namespace LunaMsgBox
+{
+    int ShowA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
+    int ShowW(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType);
+    bool IsActive();
+}

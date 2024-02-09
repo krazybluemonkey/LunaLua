@@ -57,7 +57,7 @@ public:
     void ClearTextures();
     void EmulatedBitBlt(int nXDest, int nYDest, int nWidth, int nHeight, HDC hdcSrc, int nXSrc, int nYSrc, DWORD dwRop);
     void RenderCameraToScreen(int camIdx, double renderX, double renderY, double height, double width);
-    void EndFrame(HDC hdcDest, bool isLoadScreen=false, bool redrawOnly=false, bool resizeOverlay=false);
+    void EndFrame(HDC hdcDest, bool isLoadScreen=false, bool redrawOnly=false, bool resizeOverlay=false, bool pauseOverlay=false);
     void InitForHDC(HDC hdcDest);
 
     inline bool IsEnabled() { return mInternalGLEngine.IsEnabled(); };
@@ -66,6 +66,7 @@ public:
     inline void TriggerScreenshot() { mInternalGLEngine.TriggerScreenshot(); }
     inline void TriggerScreenshot(const SCREENSHOT_CALLBACK& func) { mInternalGLEngine.TriggerScreenshot(func); }
     inline bool GifRecorderToggle() { return mInternalGLEngine.GifRecorderToggle(); }
+    inline bool GifRecorderIsRunning() { return mInternalGLEngine.GifRecorderIsRunning(); }
 
     // Stuff that run at the main thread:
     // Functions which run on the main thread, but needs to access GL resources
