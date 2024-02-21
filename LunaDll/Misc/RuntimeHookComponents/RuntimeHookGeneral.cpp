@@ -1724,10 +1724,10 @@ void TrySkipPatch()
     // Hurtful Blocks Hook
     PATCH(0x9A1843).JMP(0x9A1BDA).NOP_PAD_TO_SIZE<919>().Apply();
     PATCH(0x9A391A).JMP(runtimeHookHurtfulBlocksRaw).Apply();
-    PATCH(0x9BB9C6).JMP(runtimeHookTailSwipeRaw_9bb9c6).Apply();
+    PATCH(0x9BB9C6).JMP(runtimeHookTailSwipeRaw_9bb9c6).NOP_PAD_TO_SIZE<115>().Apply();
     PATCH(0x9BBA74).JMP(runtimeHookTailSwipeRaw_9bba74).Apply();
     PATCH(0x9BBD03).JMP(runtimeHookTailSwipeRaw_9bbd03).NOP_PAD_TO_SIZE<13>().Apply();
-    PATCH(0x9BBD52).JMP(runtimeHookTailSwipeRaw_9bbd52).NOP_PAD_TO_SIZE<11>().Apply();
+    PATCH(0x9BBD52).JMP(runtimeHookTailSwipeRaw_9bbd52).NOP_PAD_TO_SIZE<13>().Apply();
 
     PATCH(0xA28FE3).JMP(runtimeHookNPCVulnerabilityRaw).Apply();
 

@@ -335,6 +335,7 @@ void __stdcall runtimeHookChangeResolution(void* arg1, void* arg2, void* arg3, v
 void __stdcall runtimeHookSmbxCheckWindowedRaw(void);
 
 void __stdcall runtimeHookBlockBumpableRaw(void);
+
 void __stdcall runtimeHookHurtfulBlocksRaw(void);
 void __stdcall runtimeHookTailSwipeRaw_9bb9c6(void);
 void __stdcall runtimeHookTailSwipeRaw_9bba74(void);
