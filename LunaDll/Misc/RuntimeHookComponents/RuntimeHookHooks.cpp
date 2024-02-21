@@ -1751,13 +1751,14 @@ static void __stdcall runtimeHookHurtfulBlocksInternal(int hitSpot, short player
     PlayerMOB* player = Player::Get(playerIdx);
     Block* block = Block::GetRaw(blockIdx);
 
-    // don't worry about lava
+
     if (SMBX13::Vars::BlockHurts[block->BlockType] && !SMBX13::Vars::BlockKills[block->BlockType])
     {
         short floorSlope = SMBX13::Vars::BlockSlope[block->BlockType];
-        unsigned char flags = Blocks::GetBlockHurtSide(block->BlockType);
+        unsigned char flags = Blocks::GetBlockCollisionHurtSide(block->BlockType);
         bool tempBool = false;
 
+        //DebugPrint("mountsafe: %o\n", flags & 0x80);
         // stop if we shouldn't be hurt
         if (player->MountType == 2 || ((hitSpot == 1 || floorSlope != 0 && player->SlopeRelated == blockIdx) && player->MountType != 0) && (flags & 0x80) != 0) return;
 
@@ -1784,7 +1785,7 @@ static void __stdcall runtimeHookHurtfulBlocksInternal(int hitSpot, short player
         }
 
         // floor slope should harm 
-        if ((floorSlope != 0 && ((flags & 0x02) != 0 || (flags & 0x40) != 0) && player->SlopeRelated == blockIdx)) tempBool = true;
+        if ((floorSlope != 0 && ((flags & 0x01) != 0 || (flags & 0x40) != 0) && player->SlopeRelated == blockIdx)) tempBool = true;
 
         // ceiling slope should harm
         if ((SMBX13::Vars::BlockSlope2[block->BlockType] && ((flags & 0x08) != 0 || (flags & 0x40) != 0) && player->momentum.y <= block->momentum.y + block->momentum.height - (block->momentum.height * slope)))
@@ -1792,8 +1793,7 @@ static void __stdcall runtimeHookHurtfulBlocksInternal(int hitSpot, short player
             tempBool = true;
         }
 
-        // if set as invisible, don't harm (potential compatibility break)
-        if (block->IsInvisible2) tempBool = false;
+        if (block->IsInvisible2 && hitSpot != 3) tempBool = false;
 
         if (tempBool)
         {
@@ -1812,9 +1812,8 @@ static void __stdcall runtimeHookHurtfulBlocksInternal(int hitSpot, short player
 __declspec(naked) void __stdcall runtimeHookHurtfulBlocksRaw(void)
 {
     __asm {
-        //009A391A | 0FBF74CA 1E              | movsx esi,word ptr ds:[edx+ecx*8+1E]
-        push esi    // push these to make sure they're safe after the function call
-        push eax                
+        push esi
+        push eax                // push these to make sure they're safe after the function call
         push ecx
         push edx
 
@@ -1872,7 +1871,7 @@ static int __stdcall runtimeHookTailSwipe_9bb9c6(Block* block, short playerIdx, 
             if (slopeDirection != 0 && block->ContentsID == 0) return (tail->y + tail->height < refY) ? -1 : 0;
             
             // make sizables and semi solids work better with down thrust
-            if ((SMBX13::Vars::BlockIsSizable[block->BlockType] || SMBX13::Vars::BlockOnlyHitspot1[block->BlockType]) && !SMBX13::Vars::BlockNoClipping[block->BlockType])
+            if (SMBX13::Vars::BlockIsSizable[block->BlockType] || SMBX13::Vars::BlockOnlyHitspot1[block->BlockType])
             {
                 return (SMBX13::Functions::FindRunningCollision(SMBX13::Vars::Player[playerIdx].Location, *reinterpret_cast<SMBX13::Types::Location_t*>(&block->momentum)) != 1) ? -1 : 0;
             }
@@ -1888,35 +1887,35 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bb9c6(void)
 {
     __asm {
         //009BB9C6 | A1 30B9B200              | mov eax,dword ptr ds:[<blockdef_isResizeableBlock>]
-        push eax    // push these to make sure they're safe after the function call
+        push eax
         push ecx
         push ebx
         push edx
 
         lea ecx, dword ptr ss : [ebp - 0x20C]
-        push ecx            // tail
+        push ecx // tail
         mov edx, dword ptr ss : [ebp + 0x14]
         movsx ecx, word ptr ds : [edx]
-        push ecx            // stab direction
+        push ecx // stab direction
         mov edx, dword ptr ss : [ebp + 0x10]
         movsx ecx, word ptr ds : [edx]
-        push ecx            // stab bool
+        push ecx // stab bool
         mov edx, dword ptr ss : [ebp + 0x8]
         movsx ecx, word ptr ds : [edx]
-        push ecx            // player index
-        push ebx            // block pointer
+        push ecx // player index
+        push ebx // block pointer
         call runtimeHookTailSwipe_9bb9c6
         cmp eax, 0
         jne alternate_exit
 
-        pop edx     // put these back in place
+        pop edx
         pop ebx
         pop ecx
         pop eax
         push 0x9BBA39
         ret
         alternate_exit :
-        pop edx     // put these back in place
+        pop edx
             pop ebx
             pop ecx
             pop eax
@@ -1928,6 +1927,7 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bb9c6(void)
 
 static int __stdcall runtimeHookTailSwipe_9bba74(int id)
 {
+    //DebugPrint("block ID: %d \n", id);
     return SMBX13::Vars::BlockIsSizable[id] ? -1 : 0;
 }
 
@@ -1935,21 +1935,19 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bba74(void)
 {
     __asm {
         //009BBA74 | 66:837B 50 00            | cmp word ptr ds:[ebx+50],0
-        push eax    // push this to make sure it's safe after the function call
-
+        push eax
         movsx eax, word ptr ds : [ebx + 0x1E]
-        push eax            // block id
+        push eax // block id
         call runtimeHookTailSwipe_9bba74
         cmp eax, 0
         jne alternate_exit
-
-        pop eax     //we can pop this again
+        pop eax
         cmp word ptr ds : [ebx + 50], 0
         push 0x9BBA79
         ret
         alternate_exit :
         pop eax
-            mov ax, word ptr ds : [ebx + 0x1E] // put registers in expected states before jumping
+            mov ax, word ptr ds : [ebx + 0x1E] // put registers in expected states
             mov esi, dword ptr ss : [ebp + 0x14]
             mov dword ptr ss : [ebp - 0x2A4], 0
             lea eax, dword ptr ss : [ebp - 0x2A4]
@@ -1962,6 +1960,7 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bba74(void)
 
 static int __stdcall runtimeHookTailSwipe_9bbd03(int id)
 {
+    //DebugPrint("block ID: %d \n", id);
     return Blocks::GetBlockSwordBounce(id) ? -1 : 0;
 }
 
@@ -1969,18 +1968,16 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bbd03(void)
 {
     __asm {
         //009BBD03 | 8B0D 9CC0B200            | mov ecx,dword ptr ds:[B2C09C]
-        push eax    // push this to make sure it's safe after the function call
-
-        push esi            // block id
+        push eax
+        push esi // block id
         call runtimeHookTailSwipe_9bbd03
         cmp eax, 0
         jne alternate_exit
-
-        pop eax    //we can pop this again
+        pop eax
         push 0x9BBD10
         ret
         alternate_exit :
-        pop eax    //we can pop this again
+        pop eax
             push 0x9BBD40
             ret
     }
@@ -1995,18 +1992,16 @@ __declspec(naked) void __stdcall runtimeHookTailSwipeRaw_9bbd52(void)
 {
     __asm {
         //009BBD52 | 8B15 9CC0B200 | mov edx, dword ptr ds : [B2C09C]
-        push eax    // push this to make sure it's safe after the function call
-
+        push eax
         push esi // block id
         call runtimeHookTailSwipe_9bbd52
         cmp eax, 0
         je alternate_exit
-
-        pop eax    //we can pop this again
+        pop eax
         push 0x9BBD5F
         ret
         alternate_exit :
-        pop eax    //we can pop this again
+        pop eax
             push 0x9BBD75
             ret
     }
