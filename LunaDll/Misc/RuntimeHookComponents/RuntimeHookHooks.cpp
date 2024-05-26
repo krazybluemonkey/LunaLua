@@ -3415,20 +3415,20 @@ static void __stdcall runtimeHookJumpSlideFixInternal(short playerIdx) {
         extended->slidingTimeSinceOnSlope += 1;
     }
 
-    if (gSlideJumpFixIsEnabled) {
-        // fixed check:
-        if (player->UpwardJumpingForce != 0) {
-            // if the player started jumping for real
-            player->SlidingState = 0;
-        } else if (player->keymap.jumpKeyState != 0 || player->keymap.altJumpKeyState != 0) {
-            // if the player pressed jump *and* has been disconnected from a slope for a couple frames
-            if (extended->slidingTimeSinceOnSlope >= 2) {
+    if (player->keymap.jumpKeyState != 0 || player->keymap.altJumpKeyState != 0) {
+        if (gSlideJumpFixIsEnabled) {
+            // fixed check:
+            if (player->UpwardJumpingForce != 0) {
+                // if the player started jumping for real
+                player->SlidingState = 0;
+            }
+            else if (extended->slidingTimeSinceOnSlope >= 2) {
+                // if the player pressed jump *and* has been disconnected from a slope for a couple frames
                 player->SlidingState = 0;
             }
         }
-    } else {
-        // redigit's check:
-        if (player->keymap.jumpKeyState != 0 || player->keymap.altJumpKeyState != 0) {
+        else {
+            // redigit's check:
             player->SlidingState = 0; // super jank town activate
         }
     }
@@ -3884,6 +3884,24 @@ static unsigned int __stdcall runtimeHookNPCCollisionGroupInternal(int npcAIdx, 
 
     if (!gCollisionMatrix.getIndicesCollide(extA->collisionGroup,extB->collisionGroup)) // Check collision matrix
         return 0; // Collision cancelled
+
+    // Check noNPCCollision
+    if (extA->nonpccollision || extB->nonpccollision) {
+        return 0; // Collision cancelled
+    }
+
+    // check walkThroughNPCs
+    NPCMOB* npcB = NPC::GetRaw(npcBIdx);
+    if (NPC::GetWalkPastNPCs(npc->id)) {
+        if (!npc_npcblock[npcB->id] && !npc_npcblocktop[npcB->id]) {
+            return 0; // Cancelled
+        }
+    }
+    if (NPC::GetWalkPastNPCs(npcB->id)) {
+        if (!npc_npcblock[npc->id] && !npc_npcblocktop[npc->id]) {
+            return 0; // Cancelled
+        }
+    }
 
     return -1; // Collision goes ahead
 }
